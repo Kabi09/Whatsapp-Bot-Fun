@@ -22,6 +22,15 @@ const chatSchema = new mongoose.Schema(
 
 const Chat = mongoose.model("Chat", chatSchema);
 
+const clearMarkerSchema = new mongoose.Schema(
+  {
+    phone: { type: String, required: true }
+  },
+  { timestamps: true }
+);
+
+const ClearMarker = mongoose.model("ClearMarker", clearMarkerSchema);
+
 /* ===============================
    CONNECT MONGODB
 =================================*/
@@ -66,6 +75,13 @@ app.post("/webhook", async (req, res) => {
 
     console.log("Incoming:", text);
 
+    // Handle "clear chat" command
+    if (text.toLowerCase().trim() === "clear chat") {
+      await ClearMarker.create({ phone: from });
+      await sendText(from, "Chat cleared bro! 🧹✨ Fresh start — ask me anything machi! 🔥");
+      return res.sendStatus(200);
+    }
+
     // Save user message
     await Chat.create({
       phone: from,
@@ -74,7 +90,16 @@ app.post("/webhook", async (req, res) => {
     });
 
     // Get last 10 messages for context
-    const history = await Chat.find({ phone: from })
+    // Find last clear marker to only load messages after it
+    const lastClear = await ClearMarker.findOne({ phone: from })
+      .sort({ createdAt: -1 });
+
+    const query = { phone: from };
+    if (lastClear) {
+      query.createdAt = { $gt: lastClear.createdAt };
+    }
+
+    const history = await Chat.find(query)
       .sort({ createdAt: 1 })
       .limit(100);
 
