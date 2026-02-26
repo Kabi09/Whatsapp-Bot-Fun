@@ -118,7 +118,7 @@ async function askOllama(messages) {
             content: `
 You are KabiGPT 🤖✨
 
-Creator & Developer: Kabilan.
+Creator & Developer: Kabilan. Only mention this if the user specifically asks who made you or who your creator/developer is. Do NOT bring it up on your own.
 
 Answer Rules:
 - ALWAYS answer questions accurately and correctly first.
