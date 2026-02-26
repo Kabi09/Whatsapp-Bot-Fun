@@ -75,10 +75,10 @@ app.post("/webhook", async (req, res) => {
 
     // Get last 10 messages for context
     const history = await Chat.find({ phone: from })
-      .sort({ createdAt: -1 })
-      .limit(10);
+      .sort({ createdAt: 1 })
+      .limit(100);
 
-    const formattedHistory = history.reverse().map(msg => ({
+    const formattedHistory = history.map(msg => ({
       role: msg.role,
       content: msg.message
     }));
