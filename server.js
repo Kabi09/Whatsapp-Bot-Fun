@@ -35,11 +35,15 @@ const ClearMarker = mongoose.model("ClearMarker", clearMarkerSchema);
 const UserSession = require("./models/UserSession");
 
 /* ===============================
-   CONNECT MONGODB
+   CONNECT MONGODB (cached for serverless)
 =================================*/
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected ✅"))
-  .catch(err => console.error("Mongo Error:", err));
+let cachedDb = null;
+async function connectDB() {
+  if (cachedDb && mongoose.connection.readyState === 1) return cachedDb;
+  cachedDb = await mongoose.connect(process.env.MONGO_URI);
+  console.log("MongoDB Connected ✅");
+  return cachedDb;
+}
 
 /* ===============================
    BILLING API CONFIG
@@ -88,6 +92,9 @@ app.get("/webhook", (req, res) => {
 =================================*/
 app.post("/webhook", async (req, res) => {
   try {
+    // Ensure MongoDB is connected
+    await connectDB();
+
     // Prevent infinite loop (delivery status updates)
     if (req.body.entry?.[0]?.changes?.[0]?.value?.statuses) {
       return res.sendStatus(200);
@@ -129,7 +136,7 @@ app.post("/webhook", async (req, res) => {
     let session = await UserSession.findOneAndUpdate(
       { phone: from },
       { $setOnInsert: { phone: from, mode: "menu" } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // If new user (mode is still "menu" and this is their first message), show menu
