@@ -126,10 +126,14 @@ app.post("/webhook", async (req, res) => {
     }
 
     // ─── Get or create user session ───
-    let session = await UserSession.findOne({ phone: from });
+    let session = await UserSession.findOneAndUpdate(
+      { phone: from },
+      { $setOnInsert: { phone: from, mode: "menu" } },
+      { upsert: true, new: true }
+    );
 
-    if (!session) {
-      session = await UserSession.create({ phone: from, mode: "menu" });
+    // If new user (mode is still "menu" and this is their first message), show menu
+    if (session.mode === "menu" && input !== "1" && input !== "2") {
       await sendText(from, MENU_MESSAGE);
       return res.sendStatus(200);
     }
@@ -238,6 +242,15 @@ app.post("/webhook", async (req, res) => {
     res.sendStatus(200);
   } catch (err) {
     console.error("Webhook Error:", err.response?.data || err.message);
+    // Try to send error message to user
+    try {
+      const from = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
+      if (from) {
+        await sendText(from, "Machi 😅 something went wrong bro... try again!");
+      }
+    } catch (e) {
+      console.error("Error sending error message:", e.message);
+    }
     res.sendStatus(500);
   }
 });
