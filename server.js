@@ -281,6 +281,17 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
+
+
+
+
+/* ===============================
+   BILLING CACHE (1.5 MIN = 90 sec)
+=================================*/
+let billingCache = null;
+let billingCacheTime = 0;
+const BILLING_CACHE_DURATION = 90 * 1000; // 90 seconds 
+
 /* ===============================
    FETCH BILLING DATA
 =================================*/
