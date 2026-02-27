@@ -293,18 +293,38 @@ let billingCacheTime = 0;
 const BILLING_CACHE_DURATION = 90 * 1000; // 90 seconds 
 
 /* ===============================
-   FETCH BILLING DATA
+   FETCH BILLING DATA (WITH CACHE)
 =================================*/
 async function fetchBillingData() {
   try {
+    const now = Date.now();
+
+    // ✅ If cache exists and not expired
+    if (
+      billingCache &&
+      now - billingCacheTime < BILLING_CACHE_DURATION
+    ) {
+      console.log("⚡ Using cached billing data (within 1.5 min)");
+      return billingCache;
+    }
+
+    console.log("🔄 Fetching fresh billing data from API...");
+
     const token = generateBillingToken();
+
     const response = await axios.get(BILLING_API_URL, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
       }
     });
-    return response.data;
+
+    // Save to cache
+    billingCache = response.data;
+    billingCacheTime = now;
+
+    return billingCache;
+
   } catch (err) {
     console.error("Billing API Error:", err.response?.data || err.message);
     return null;
