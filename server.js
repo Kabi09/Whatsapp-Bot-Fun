@@ -39,10 +39,28 @@ const UserSession = require("./models/UserSession");
 =================================*/
 let cachedDb = null;
 async function connectDB() {
+  // Already connected
   if (cachedDb && mongoose.connection.readyState === 1) return cachedDb;
-  cachedDb = await mongoose.connect(process.env.MONGO_URI);
-  console.log("MongoDB Connected ✅");
-  return cachedDb;
+
+  // If disconnected or error, reset
+  if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
+    cachedDb = null;
+  }
+
+  try {
+    cachedDb = await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 30000,
+      maxPoolSize: 10,
+      bufferCommands: false,
+    });
+    console.log("MongoDB Connected ✅");
+    return cachedDb;
+  } catch (err) {
+    cachedDb = null;
+    console.error("MongoDB Connection Error:", err.message);
+    throw err;
+  }
 }
 
 /* ===============================
@@ -70,7 +88,8 @@ Choose an option machi:
 2️⃣ *Bill* — Ask about billing data 🧾
 
 👉 Reply *1* or *2* to select
-💡 Type *menu* anytime to come back here`;
+💡 Type *menu* anytime to come back here
+💡 Type *clear chat* anytime to fresh start`;
 
 /* ===============================
    WEBHOOK VERIFY
